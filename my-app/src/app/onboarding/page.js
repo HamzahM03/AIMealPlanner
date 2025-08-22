@@ -228,7 +228,7 @@ export default function OnboardingForm() {
         return (
           <div className="space-y-4">
             <div className="text-center mb-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">Final Details</h2>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">Dietary Preferences</h2>
               <p className="text-gray-600">Let us know about dietary restrictions and cooking preferences</p>
             </div>
 

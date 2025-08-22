@@ -7,15 +7,6 @@ const client = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY
 });
 
-const userPref = {
-    'RMR' : '1719',
-    'goal': 'weight loss',
-    'dietaryRestrictions': 'peanuts, pork', 
-    'preferredCuisine': 'Middle Eastern',
-    'cookingTime': '30 minutes',
-    'daily': false,
-};
-
 async function getNutritionAnalysis(ingredientsList) {
     const url = 'https://api.edamam.com/api/nutrition-details';
     
@@ -76,7 +67,7 @@ export async function generateMealPlan(userPref) {
         const prompt = makePrompt(userPref);
 
         const response = await client.chat.completions.create({
-            model: "gpt-5-mini",
+            model: "gpt-4o-mini", // Fixed model name
             messages: [
                 {
                     "role": "system", 
@@ -90,6 +81,8 @@ export async function generateMealPlan(userPref) {
         });
 
         const content = response.choices[0].message.content;
+        console.log('Raw OpenAI response:', content); // Debug log
+        
         const mealPlan = JSON.parse(content);
         
         return mealPlan;
@@ -99,7 +92,7 @@ export async function generateMealPlan(userPref) {
     }
 }
 
-async function enhanceMealPlanWithNutrition(mealPlan) {
+export async function enhanceMealPlanWithNutrition(mealPlan) {
     const enhancedMealPlan = { ...mealPlan };
     
     // Process each day in the meal plan
@@ -151,9 +144,12 @@ async function enhanceMealPlanWithNutrition(mealPlan) {
 }
 
 function makePrompt(userPref) {
+    // Handle both naming conventions
     const {
-        bmr,
+        BMR, // New naming
+        bmr = BMR, // Fallback to old naming
         activity_level,
+        activityLevel = activity_level,
         goal,
         dietaryRestrictions,
         preferredCuisine,
@@ -163,8 +159,7 @@ function makePrompt(userPref) {
     } = userPref;
     
     let temp = daily ? 'daily' : 'weekly';
-    
-    // Create the appropriate JSON template based on plan type
+
     let jsonTemplate;
     
     if (daily) {
@@ -270,9 +265,12 @@ function makePrompt(userPref) {
     }`;
     }
 
+    const usedBMR = bmr || BMR || '2000';
+    const usedActivity = activityLevel || activity_level || 'moderate';
+
     return `Create a ${temp} meal plan with the following requirements:
     
-    Goal: ${goal} for a person with a Basal metabolic weight of: ${bmr} calories per day and an activity level of {activity_level} moderate
+    Goal: ${goal} for a person with a Basal metabolic weight of: ${usedBMR} calories per day and an activity level of ${usedActivity}
     Dietary Restrictions/Allergies: ${dietaryRestrictions}
     Cooking time preference: ${cookingTime}
     Preferred Cuisine: ${preferredCuisine}
@@ -306,72 +304,8 @@ function makePrompt(userPref) {
     ${jsonTemplate}`;
 }
 
-async function example() {
-    try {
-        console.log('Generating enhanced meal plan...');
-        const basicMealPlan = await generateMealPlan(userPref);
-        console.log('Basic meal plan generated:', JSON.stringify(basicMealPlan, null, 2));
-        
-        console.log('Enhancing with nutrition data...');
-        const enhancedMealPlan = await enhanceMealPlanWithNutrition(basicMealPlan);
-        
-        console.log('Final Enhanced Meal Plan:');
-        console.log(JSON.stringify(enhancedMealPlan, null, 2));
-        
-        const mealPlanData = enhancedMealPlan.mealPlan;
-        const planType = enhancedMealPlan.planType;
-        
-        console.log(`\n--- ${planType.toUpperCase()} Meal Plan Summary ---`);
-        
-        if (planType === 'daily') {
-            const dayMeals = mealPlanData.day1;
-            dayMeals.forEach((meal, index) => {
-                console.log(`Meal ${index + 1}: ${meal.name}`);
-                if (meal.macros) {
-                    console.log(`  Nutrition: ${meal.macros.calories} cal, ${meal.macros.protein} protein, ${meal.macros.carbs} carbs, ${meal.macros.fat} fat`);
-                } else {
-                    console.log(`  Nutrition: ${meal.nutritionError || 'Data unavailable'}`);
-                }
-                console.log(`  Cook time: ${meal.prepTime} prep + ${meal.cookTime} cook`);
-                console.log(`  Instructions: ${meal.instructions.join(' ')}`);
-                console.log('---');
-            });
-        } else if (planType === 'weekly') {
-            Object.keys(mealPlanData).forEach(dayKey => {
-                console.log(`\n📅 ${dayKey.toUpperCase()}:`);
-                const dayMeals = mealPlanData[dayKey];
-                
-                dayMeals.forEach((meal, mealIndex) => {
-                    console.log(`  Meal ${mealIndex + 1}: ${meal.name}`);
-                    if (meal.macros) {
-                        console.log(`    Nutrition: ${meal.macros.calories} cal, ${meal.macros.protein} protein, ${meal.macros.carbs} carbs, ${meal.macros.fat} fat`);
-                    } else {
-                        console.log(`    Nutrition: ${meal.nutritionError || 'Data unavailable'}`);
-                    }
-                    console.log(`    Cook time: ${meal.prepTime} prep + ${meal.cookTime} cook`);
-                    console.log(`    Instructions: ${meal.instructions.join(' ')}`);
-                    console.log('  ---');
-                });
-                
-                // Calculate daily totals
-                const dayTotals = calculateDayTotals(dayMeals);
-                console.log(`Daily Totals: ${dayTotals.calories} cal, ${dayTotals.protein}g protein, ${dayTotals.carbs}g carbs, ${dayTotals.fat}g fat`);
-                console.log('═══════════════════════════════════════');
-            });
-            
-            // Calculate weekly totals
-            const weeklyTotals = calculateWeeklyTotals(mealPlanData);
-            console.log(`\n🗓️  WEEKLY TOTALS:`);
-            console.log(`   Average per day: ${Math.round(weeklyTotals.totalCalories / weeklyTotals.days)} cal, ${Math.round(weeklyTotals.totalProtein / weeklyTotals.days)}g protein`);
-            console.log(`   Total for week: ${weeklyTotals.totalCalories} cal, ${weeklyTotals.totalProtein}g protein`);
-        }
-
-    } catch (error) {
-        console.error('Failed to generate meal plan:', error);
-    }
-}
-
-function calculateDayTotals(dayMeals) {
+// Helper functions for calculating nutrition totals
+export function calculateDayTotals(dayMeals) {
     let totalCalories = 0;
     let totalProtein = 0;
     let totalCarbs = 0;
@@ -394,8 +328,7 @@ function calculateDayTotals(dayMeals) {
     };
 }
 
-// Helper function to calculate weekly nutrition totals
-function calculateWeeklyTotals(mealPlanData) {
+export function calculateWeeklyTotals(mealPlanData) {
     let totalCalories = 0;
     let totalProtein = 0;
     let totalCarbs = 0;
@@ -419,6 +352,3 @@ function calculateWeeklyTotals(mealPlanData) {
         days
     };
 }
-
-
-example();
