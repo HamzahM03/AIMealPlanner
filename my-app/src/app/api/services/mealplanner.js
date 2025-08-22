@@ -4,7 +4,7 @@ const EDAMAM_APP_ID = process.env.APPID
 const EDAMAM_APP_KEY = process.env.APPKEY
 
 const client = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY
+    apiKey: process.env.OPENAI_API_KEY 
 });
 
 async function getNutritionAnalysis(ingredientsList) {
