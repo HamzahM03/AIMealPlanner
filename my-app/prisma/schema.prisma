@@ -14,10 +14,34 @@ model User {
   emailVerified DateTime?
   image         String?
   passwordHash  String   // Remove ? to make required
+  isOnboarded   Boolean  @default(false)
 
-  
+  height        Float?   // in cm
+  weight        Float?   // in kg
+  sex           Sex?
+  age           Int?
+  allergies     String[] // array of allergy strings
+  dietaryRestrictions String[] 
+  preferredCookingTime Int?   // in minutes
+  activityLevel ActivityLevel?
+  bmr           Float?   
+  goal          String?
   accounts      Account[]
   sessions      Session[]
+}
+
+enum Sex {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum ActivityLevel {
+  SEDENTARY     // Little or no exercise
+  LIGHT         // Light exercise/sports 1-3 days/week
+  MODERATE      // Moderate exercise/sports 3-5 days/week
+  ACTIVE        // Hard exercise/sports 6-7 days a week
+  VERY_ACTIVE   // Very hard exercise/physical job & exercise 2x/day
 }
 model Account {
   id                String  @id @default(cuid())
