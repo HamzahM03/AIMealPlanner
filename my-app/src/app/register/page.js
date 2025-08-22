@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { signIn } from "next-auth/react";
 
+
 export default function RegisterPage() {
   const [name, setName] = useState("New User");
   const [email, setEmail] = useState("new@example.com");

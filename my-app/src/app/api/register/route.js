@@ -20,6 +20,7 @@ export async function POST(req) {
 
     const passwordHash = await bcrypt.hash(password, 10);
 
+    //Creates new user into our database, only returns non-sensitive fields.
     const user = await prisma.user.create({
       data: { name, email, passwordHash },
       select: { id: true, email: true, name: true },
