@@ -9,15 +9,16 @@ datasource db {
 
 model User {
   id            String   @id @default(cuid())
-  name          String?
-  email         String?  @unique
+  name          String
+  email         String   @unique  
   emailVerified DateTime?
   image         String?
-  passwordHash  String?
+  passwordHash  String   // Remove ? to make required
+
+  
   accounts      Account[]
   sessions      Session[]
 }
-
 model Account {
   id                String  @id @default(cuid())
   userId            String
